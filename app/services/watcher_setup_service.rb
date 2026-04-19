@@ -9,7 +9,7 @@ class WatcherSetupService
   SUBREDDIT_LIMIT = 3   # Reddit results fetched per search query
   MAX_SUBREDDITS  = 10  # final cap on stored subreddits
   REQUEST_TIMEOUT = 8
-  HEADERS         = { "User-Agent" => "reddit-leads/1.0 by FrequentBike8327" }.freeze
+  HEADERS         = { "User-Agent" => "thread-watch/1.0 by FrequentBike8327" }.freeze
 
   FALLBACK_SUBREDDITS = %w[
     entrepreneur smallbusiness freelance SaaS startups

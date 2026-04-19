@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><%= content_for?(:title) ? "#{yield(:title)} · RedditLeads" : "RedditLeads" %></title>
+  <title><%= content_for?(:title) ? "#{yield(:title)} · ThreadWatch" : "ThreadWatch" %></title>
   <%= csrf_meta_tags %>
   <%= csp_meta_tag %>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -19,7 +19,7 @@
   <header class="w-full bg-white border-b border-gray-100">
     <div class="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
       <%= link_to root_path, class: "text-xl font-extrabold", style: "color:#FF4500" do %>
-        RedditLeads
+        ThreadWatch
       <% end %>
       <p class="text-sm text-gray-400">Find customers on Reddit</p>
     </div>
@@ -45,7 +45,7 @@
   </main>
 
   <footer class="text-center py-6 text-xs text-gray-400">
-    © <%= Date.current.year %> RedditLeads · Built for solo founders
+    © <%= Date.current.year %> ThreadWatch · Built for solo founders
   </footer>
 
 </body>

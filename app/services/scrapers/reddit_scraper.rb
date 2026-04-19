@@ -20,7 +20,7 @@ module Scrapers
 
     MAX_COMMENT_DEPTH = 3
 
-    HEADERS = { "User-Agent" => "reddit-leads/1.0 by FrequentBike8327" }.freeze
+    HEADERS = { "User-Agent" => "thread-watch/1.0 by FrequentBike8327" }.freeze
 
     TIME_FILTERS = %w[hour day week month year all].freeze
 

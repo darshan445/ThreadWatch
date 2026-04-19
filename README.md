@@ -1,4 +1,4 @@
-# RedditLeads
+# ThreadWatch
 
 A Rails SaaS app that scrapes Reddit for pain-point posts and comments,
 stores them in PostgreSQL, and surfaces them via a web dashboard.
@@ -75,7 +75,7 @@ Visit **http://localhost:3000** → click **Scrape Reddit** to kick off a run.
 | `DB_PORT` | `5432` | PostgreSQL port |
 | `DB_USERNAME` | `postgres` | PostgreSQL user |
 | `DB_PASSWORD` | _(empty)_ | PostgreSQL password |
-| `DB_NAME` | `reddit_leads_production` | Production DB name |
+| `DB_NAME` | `thread_watch_production` | Production DB name |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL |
 | `RAILS_MASTER_KEY` | — | Decrypts credentials |
 
