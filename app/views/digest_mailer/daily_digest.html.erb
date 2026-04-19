@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f9fafb; margin: 0; padding: 0; color: #111827; }
+    .wrapper { max-width: 600px; margin: 32px auto; background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb; }
+    .header { background: #FF4500; padding: 28px 32px; }
+    .header h1 { margin: 0; color: #fff; font-size: 22px; font-weight: 800; }
+    .header p { margin: 6px 0 0; color: rgba(255,255,255,0.85); font-size: 14px; }
+    .body { padding: 24px 32px; }
+    .watcher-section { margin-bottom: 32px; }
+    .watcher-header { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; border-bottom: 2px solid #f3f4f6; margin-bottom: 14px; }
+    .watcher-icon { font-size: 16px; }
+    .watcher-name { font-size: 15px; font-weight: 700; color: #111827; }
+    .lead-card { padding: 14px 0; border-bottom: 1px solid #f3f4f6; }
+    .lead-card:last-child { border-bottom: none; }
+    .lead-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+    .upvotes { font-size: 12px; font-weight: 600; color: #6b7280; }
+    .subreddit { font-size: 12px; font-weight: 600; color: #FF4500; background: #fff7f5; border: 1px solid #ffd5c8; border-radius: 6px; padding: 2px 7px; }
+    .time-ago { font-size: 12px; color: #9ca3af; }
+    .score-badge { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 2px 7px; }
+    .score-high { background: #dcfce7; color: #15803d; }
+    .score-mid  { background: #fef9c3; color: #92400e; }
+    .score-low  { background: #f3f4f6; color: #6b7280; }
+    .lead-title { font-size: 14px; font-weight: 600; color: #111827; line-height: 1.4; margin-bottom: 10px; }
+    .view-btn { display: inline-block; background: #FF4500; color: #fff; font-size: 13px; font-weight: 600; text-decoration: none; padding: 7px 16px; border-radius: 8px; }
+    .footer { padding: 20px 32px; border-top: 1px solid #f3f4f6; text-align: center; }
+    .footer p { margin: 0; font-size: 12px; color: #9ca3af; }
+    .footer a { color: #FF4500; text-decoration: none; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <div class="header">
+    <h1>🎯 <%= @total_count %> new lead<%= "s" if @total_count != 1 %> today</h1>
+    <p>Hi <%= @user.name.presence || @user.email %> — here's what Reddit found for you in the last 24 hours.</p>
+  </div>
+
+  <div class="body">
+    <% @watcher_leads.each do |watcher, leads| %>
+      <div class="watcher-section">
+        <div class="watcher-header">
+          <span class="watcher-icon">📡</span>
+          <span class="watcher-name"><%= watcher.name %></span>
+        </div>
+
+        <% leads.each do |lead| %>
+          <% post = lead.raw_post %>
+          <div class="lead-card">
+            <div class="lead-meta">
+              <span class="upvotes">↑<%= post.upvotes.to_i %></span>
+              <span class="subreddit">r/<%= post.metadata&.dig("subreddit") %></span>
+              <span class="time-ago"><%= time_ago_in_words(post.scraped_at || lead.created_at) %> ago</span>
+              <% score_class = lead.score >= 150 ? "score-high" : lead.score >= 80 ? "score-mid" : "score-low" %>
+              <span class="score-badge <%= score_class %>"><%= lead.score %> pts</span>
+            </div>
+            <p class="lead-title">"<%= post.title&.truncate(120) %>"</p>
+            <%= link_to "View Lead →", watcher_leads_url(watcher), class: "view-btn" %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="footer">
+    <p>You're receiving this because you have an active RedditLeads account.</p>
+    <p style="margin-top:6px"><%= link_to "Manage watchers", watchers_url %></p>
+  </div>
+
+</div>
+</body>
+</html>

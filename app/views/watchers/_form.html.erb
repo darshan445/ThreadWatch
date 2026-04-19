@@ -1,0 +1,120 @@
+<%= form_with model: watcher, class: "space-y-5" do |f| %>
+
+  <% if watcher.errors.any? %>
+    <div class="rounded-xl bg-red-50 border border-red-200 p-4">
+      <p class="text-sm font-semibold text-red-700 mb-1">Please fix the following:</p>
+      <ul class="list-disc list-inside space-y-0.5">
+        <% watcher.errors.full_messages.each do |msg| %>
+          <li class="text-sm text-red-600"><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%# ── Name ──────────────────────────────────────────────── %>
+  <div>
+    <%= f.label :name, "Watcher name", class: "block text-sm font-semibold text-gray-700 mb-1.5" %>
+    <p class="text-xs text-gray-400 mb-2">A label to identify this watcher (e.g. "My Invoicing SaaS")</p>
+    <%= f.text_field :name, placeholder: "My Invoicing Tool",
+          class: "w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500" %>
+  </div>
+
+  <%# ── Description (always visible) ─────────────────────── %>
+  <div>
+    <%= f.label :description, "What you offer & who it's for", class: "block text-sm font-semibold text-gray-700 mb-1.5" %>
+    <% if watcher.new_record? %>
+      <p class="text-xs text-gray-400 mb-2">
+        Describe your product and ideal customer. AI will generate keywords and subreddits from this.
+      </p>
+    <% else %>
+      <p class="text-xs text-gray-400 mb-2">Used by AI lead scoring to judge fit.</p>
+    <% end %>
+    <%= f.text_area :description, rows: 3,
+          placeholder: "Who is your customer and what pain do they have? e.g. Freelancers who manually chase clients for invoice payments",
+          class: "w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 resize-none" %>
+  </div>
+
+  <%# ── Keywords + Subreddits: hidden on new (AI fills them); editable on edit ── %>
+  <% if watcher.persisted? %>
+    <div>
+      <%= f.label :keywords, "Keywords", class: "block text-sm font-semibold text-gray-700 mb-1.5" %>
+      <p class="text-xs text-gray-400 mb-2">
+        AI-generated. Edit freely — comma-separated phrases, 1–4 words each.
+      </p>
+      <%= f.text_area :keywords, rows: 3,
+            placeholder: "invoice tool, payment reminders, clients not paying",
+            class: "w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 resize-none" %>
+    </div>
+
+    <div>
+      <%= f.label :subreddits, "Subreddits", class: "block text-sm font-semibold text-gray-700 mb-1.5" %>
+      <p class="text-xs text-gray-400 mb-2">
+        AI-generated from Reddit search. Edit freely — comma-separated names (without r/).
+      </p>
+      <%= f.text_area :subreddits, rows: 2,
+            placeholder: "entrepreneur, freelance, SaaS, smallbusiness",
+            class: "w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 resize-none" %>
+    </div>
+  <% else %>
+    <div class="rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 flex items-start gap-3">
+      <svg class="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+      </svg>
+      <p class="text-xs text-indigo-700 leading-relaxed">
+        <strong>AI will auto-generate</strong> keyword phrases and relevant subreddits from your description.
+        You can review and edit them after creation.
+      </p>
+    </div>
+  <% end %>
+
+  <%# ── Settings ───────────────────────────────────────────── %>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div>
+      <%= f.label :fetch_limit, "Max posts per search", class: "block text-sm font-semibold text-gray-700 mb-1.5" %>
+      <p class="text-xs text-gray-400 mb-2">Per keyword, per subreddit (1–100).</p>
+      <%= f.number_field :fetch_limit, min: 1, max: 100, step: 1,
+            class: "w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500" %>
+    </div>
+    <div>
+      <%= f.label :reddit_time_filter, "Post age window", class: "block text-sm font-semibold text-gray-700 mb-1.5" %>
+      <p class="text-xs text-gray-400 mb-2">Reddit search time range.</p>
+      <% time_labels = {
+           "hour"  => "Last hour",
+           "day"   => "Last day (recommended)",
+           "week"  => "Last week",
+           "month" => "Last month",
+           "year"  => "Last year",
+           "all"   => "All time"
+         } %>
+      <%= f.select :reddit_time_filter,
+            Watcher::REDDIT_TIME_WINDOWS.map { |tf| [time_labels[tf] || tf.titleize, tf] },
+            {},
+            class: "w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500" %>
+    </div>
+  </div>
+
+  <%# ── Active toggle ──────────────────────────────────────── %>
+  <div class="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+    <%= f.check_box :active, class: "w-4 h-4 rounded cursor-pointer", style: "accent-color:#FF4500" %>
+    <div>
+      <%= f.label :active, "Active", class: "text-sm font-semibold text-gray-700 cursor-pointer" %>
+      <p class="text-xs text-gray-400">Inactive watchers are paused and won't generate new leads.</p>
+    </div>
+  </div>
+
+  <%# ── Submit ─────────────────────────────────────────────── %>
+  <div class="flex items-center gap-3 pt-2">
+    <% label = if watcher.new_record?
+                 "Create & Generate Keywords"
+               else
+                 "Save Changes"
+               end %>
+    <%= f.submit label,
+          class: "px-6 py-2.5 rounded-xl font-semibold text-sm text-white cursor-pointer",
+          style: "background:#FF4500" %>
+    <%= link_to "Cancel", watchers_path,
+          class: "px-6 py-2.5 rounded-xl font-semibold text-sm text-gray-600 border border-gray-200 hover:bg-gray-50" %>
+  </div>
+
+<% end %>

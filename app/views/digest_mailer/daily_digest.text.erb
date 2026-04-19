@@ -1,0 +1,19 @@
+🎯 <%= @total_count %> new lead<%= "s" if @total_count != 1 %> today — RedditLeads
+
+Hi <%= @user.name.presence || @user.email %>,
+Here's what Reddit found for you in the last 24 hours.
+
+<% @watcher_leads.each do |watcher, leads| %>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📡 <%= watcher.name %>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<% leads.each do |lead| %>
+<% post = lead.raw_post %>
+↑<%= post.upvotes.to_i %>  r/<%= post.metadata&.dig("subreddit") %>  •  <%= time_ago_in_words(post.scraped_at || lead.created_at) %> ago  •  <%= lead.score %> pts
+"<%= post.title&.truncate(120) %>"
+<%= watcher_leads_url(watcher) %>
+
+<% end %>
+<% end %>
+─────────────────────────────────────
+Manage watchers: <%= watchers_url %>

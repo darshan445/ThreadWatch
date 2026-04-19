@@ -1,0 +1,91 @@
+<div id="lead_<%= lead.id %>"
+     class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-3">
+
+  <div class="flex items-center gap-2 flex-wrap">
+    <span class="text-xs font-semibold text-orange-600 bg-orange-50 border border-orange-100 rounded-lg px-2 py-0.5">
+      r/<%= lead.raw_post.metadata&.dig("subreddit") %>
+    </span>
+    <span class="text-xs text-gray-400">
+      <%= time_ago_in_words(lead.raw_post.scraped_at || lead.created_at) %> ago
+    </span>
+    <div class="ml-auto flex items-center gap-2">
+      <% if lead.ai_match.nil? %>
+        <span class="text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full px-2 py-0.5">AI review…</span>
+      <% end %>
+      <%= render "leads/score_badge", score: lead.score %>
+      <%= render "leads/status_badge", status: lead.status %>
+    </div>
+  </div>
+
+  <h3 class="font-semibold text-gray-900 leading-snug">
+    <%= lead.raw_post.title&.truncate(100) %>
+  </h3>
+
+  <div class="flex items-center gap-4 text-xs text-gray-400">
+    <span>↑ <%= lead.raw_post.upvotes.to_i %> upvotes</span>
+    <span>💬 <%= lead.raw_post.comment_count.to_i %> comments</span>
+    <% if lead.raw_post.metadata&.dig("author") %>
+      <span>u/<%= lead.raw_post.metadata.dig("author") %></span>
+    <% end %>
+  </div>
+
+  <div class="flex items-center gap-2 flex-wrap pt-1 border-t border-gray-100">
+
+    <% if lead.raw_post.url.present? %>
+      <%= link_to lead.raw_post.url, target: "_blank", rel: "noopener noreferrer",
+            class: "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200" do %>
+        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/>
+          <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/>
+        </svg>
+        Open Reddit
+      <% end %>
+    <% end %>
+
+    <% status_actions = { "saved" => "Save", "replied" => "Mark Replied", "ignored" => "Ignore" } %>
+    <% status_actions.except(lead.status).each do |new_status, label| %>
+      <%= button_to label,
+            lead_path(lead),
+            method: :patch,
+            params: { lead: { status: new_status } },
+            class: "px-3 py-1.5 rounded-lg text-xs font-semibold border " + case new_status
+              when "saved"   then "border-blue-200 text-blue-600 hover:bg-blue-50"
+              when "replied" then "border-green-200 text-green-600 hover:bg-green-50"
+              when "ignored" then "border-gray-200 text-gray-500 hover:bg-gray-50"
+              else "border-gray-200 text-gray-500 hover:bg-gray-50"
+            end %>
+    <% end %>
+
+    <% if %w[converted ignored].include?(lead.status) %>
+      <%= button_to "Restore",
+            lead_path(lead),
+            method: :patch,
+            params: { lead: { status: "new" } },
+            class: "px-3 py-1.5 rounded-lg text-xs font-semibold border border-green-200 text-green-600 hover:bg-green-50" %>
+    <% end %>
+
+    <%= link_to "Details", lead_path(lead),
+          class: "px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50" %>
+
+    <% if reply_templates.any? %>
+      <details class="relative ml-auto" data-templates-dropdown>
+        <summary class="list-none cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 select-none">
+          Templates ▾
+        </summary>
+        <div class="absolute right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-xl shadow-lg w-64 py-1 max-h-60 overflow-y-auto">
+          <% reply_templates.each do |t| %>
+            <button type="button"
+                    class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                    data-template-body="<%= j t.body %>"
+                    data-use-url="<%= use_reply_template_path(t) %>"
+                    onclick="rlUseTemplate(this)">
+              <span class="font-medium block truncate"><%= t.name %></span>
+              <span class="text-xs text-gray-400 block truncate"><%= t.body.truncate(60) %></span>
+            </button>
+          <% end %>
+        </div>
+      </details>
+    <% end %>
+
+  </div>
+</div>

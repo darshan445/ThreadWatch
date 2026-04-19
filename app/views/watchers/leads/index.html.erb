@@ -1,0 +1,68 @@
+<% content_for :title, @watcher.name %>
+
+<div class="flex items-start justify-between gap-4 mb-6">
+  <div class="min-w-0">
+    <div class="flex items-center gap-2 mb-1">
+      <%= link_to "← My Watchers", watchers_path, class: "text-xs text-gray-400 hover:text-gray-600" %>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+      <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 <%= @watcher.active? ? "bg-green-400" : "bg-gray-300" %>"></span>
+      <%= @watcher.name %>
+    </h1>
+    <p class="text-gray-400 text-sm mt-0.5">
+      <%= @watcher.subreddits_list.map { |s| "r/#{s}" }.join(" · ") %>
+      &nbsp;·&nbsp;
+      <%= @watcher.keywords_list.join(", ") %>
+      <span class="text-gray-300"> · Up to <%= @watcher.fetch_limit %>/search · <%= @watcher.reddit_time_filter %> window</span>
+    </p>
+  </div>
+  <div class="flex items-center gap-2 flex-shrink-0">
+    <%= link_to "Edit", edit_watcher_path(@watcher),
+          class: "px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50" %>
+  </div>
+</div>
+
+<% tab_statuses = [nil, "new", "saved", "replied", "converted", "ignored"] %>
+<% tab_labels   = { nil => "All", "new" => "New", "saved" => "Saved", "replied" => "Replied", "converted" => "Converted", "ignored" => "Ignored" } %>
+
+<div class="flex items-center gap-1 mb-5 overflow-x-auto pb-1">
+  <% tab_statuses.each do |s| %>
+    <% count = if s.nil?
+          @watcher.leads.not_ai_rejected.count
+        elsif s == "ignored"
+          @watcher.leads.where(status: "ignored").count
+        else
+          @watcher.leads.where(status: s).not_ai_rejected.count
+        end %>
+    <% active_tab = @status_filter == s %>
+    <%= link_to watcher_leads_path(@watcher, status: s),
+          class: "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold whitespace-nowrap " +
+                 (active_tab ? "text-white" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"),
+          style: active_tab ? "background:#FF4500" : "" do %>
+      <%= tab_labels[s] %>
+      <span class="text-xs <%= active_tab ? "text-orange-100" : "text-gray-400" %>">
+        <%= count %>
+      </span>
+    <% end %>
+  <% end %>
+</div>
+
+<% if @leads.any? %>
+  <div class="space-y-3" id="lead-feed">
+    <% @leads.each do |lead| %>
+      <%= render "leads/lead_card", lead: lead, reply_templates: @reply_templates %>
+    <% end %>
+  </div>
+<% else %>
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm py-20 text-center">
+    <h2 class="text-lg font-semibold text-gray-900 mb-2">No leads found</h2>
+    <p class="text-gray-500 text-sm max-w-sm mx-auto">
+      <% if @status_filter %>
+        No <%= @status_filter %> leads for this watcher.
+        <%= link_to "View all →", watcher_leads_path(@watcher), style: "color:#FF4500", class: "font-semibold" %>
+      <% else %>
+        Run the watcher to start finding Reddit leads.
+      <% end %>
+    </p>
+  </div>
+<% end %>

@@ -1,0 +1,108 @@
+<% content_for :title, "Dashboard" %>
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">
+      Welcome back<%= ", #{current_user.name}" if current_user.name.present? %>
+    </h1>
+    <p class="text-gray-500 text-sm mt-0.5">Here's what's happening across your watchers.</p>
+  </div>
+  <%= link_to new_watcher_path,
+        class: "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white",
+        style: "background:#FF4500" do %>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    New Watcher
+  <% end %>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+  <% [
+    { label: "Active Watchers",  value: @watchers.where(active: true).count, color: "text-orange-500", bg: "bg-orange-50" },
+    { label: "Total Leads",      value: @total_leads,   color: "text-blue-600",  bg: "bg-blue-50"   },
+    { label: "New Today",        value: @new_leads_today, color: "text-green-600", bg: "bg-green-50"  },
+    { label: "Replied",          value: @replied_leads, color: "text-purple-600",bg: "bg-purple-50" },
+  ].each do |s| %>
+    <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+      <div class="<%= s[:bg] %> rounded-xl w-10 h-10 flex items-center justify-center mb-3">
+        <span class="<%= s[:color] %> font-extrabold text-lg"><%= s[:value] %></span>
+      </div>
+      <p class="text-2xl font-extrabold text-gray-900"><%= s[:value] %></p>
+      <p class="text-sm text-gray-500 mt-0.5"><%= s[:label] %></p>
+    </div>
+  <% end %>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-900">Your Watchers</h2>
+      <%= link_to "View all →", watchers_path, class: "text-sm font-medium", style: "color:#FF4500" %>
+    </div>
+
+    <% if @watchers.any? %>
+      <ul class="divide-y divide-gray-100">
+        <% @watchers.limit(5).each do |m| %>
+          <li class="hover:bg-gray-50">
+            <%= link_to watcher_leads_path(m), class: "px-5 py-3 flex items-center justify-between gap-4 block" do %>
+              <div class="min-w-0">
+                <p class="font-medium text-gray-900 text-sm truncate"><%= m.name %></p>
+                <p class="text-xs text-gray-400 truncate mt-0.5"><%= m.subreddits_list.map { |s| "r/#{s}" }.join(", ") %></p>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <% new_count = m.leads.where(status: "new").merge(Lead.not_ai_rejected).count %>
+                <% if new_count > 0 %>
+                  <span class="text-xs font-bold text-white rounded-full px-2 py-0.5" style="background:#FF4500">
+                    <%= new_count %> new
+                  </span>
+                <% end %>
+                <span class="inline-block w-2 h-2 rounded-full <%= m.active? ? "bg-green-400" : "bg-gray-300" %>"></span>
+              </div>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <div class="px-5 py-12 text-center">
+        <p class="text-gray-500 text-sm">No watchers yet.</p>
+        <%= link_to "Create your first watcher →", new_watcher_path,
+              class: "text-sm font-semibold mt-2 inline-block", style: "color:#FF4500" %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-900">Recent Leads</h2>
+      <%= link_to "Watchers →", watchers_path, class: "text-sm font-medium", style: "color:#FF4500" %>
+    </div>
+
+    <% if @recent_leads.any? %>
+      <ul class="divide-y divide-gray-100">
+        <% @recent_leads.each do |lead| %>
+          <li class="px-5 py-3">
+            <%= link_to lead_path(lead), class: "block" do %>
+              <div class="flex items-start justify-between gap-3">
+                <p class="text-sm font-medium text-gray-900 line-clamp-1">
+                  <%= lead.raw_post.title %>
+                </p>
+                <%= render "leads/score_badge", score: lead.score %>
+              </div>
+              <div class="flex items-center gap-3 mt-1">
+                <span class="text-xs text-gray-400"><%= lead.watcher.name %></span>
+                <%= render "leads/status_badge", status: lead.status %>
+              </div>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <div class="px-5 py-12 text-center">
+        <p class="text-gray-500 text-sm">No leads yet. Set up a watcher to start finding them.</p>
+      </div>
+    <% end %>
+  </div>
+
+</div>

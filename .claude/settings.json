@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rails db:migrate:status)",
+      "Bash(rails routes *)",
+      "Bash(ruby -c /home/cipl1668/business-research/reddit-leads/app/models/user.rb /home/cipl1668/business-research/reddit-leads/app/controllers/application_controller.rb /home/cipl1668/business-research/reddit-leads/app/controllers/dashboard/base_controller.rb /home/cipl1668/business-research/reddit-leads/app/controllers/landing_controller.rb)"
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+<% content_for :title, "Pricing" %>
+
+<div class="max-w-lg mx-auto text-center">
+  <h1 class="text-2xl font-bold text-gray-900 mb-2">Simple pricing</h1>
+  <p class="text-gray-500 text-sm mb-8">One plan. Everything included.</p>
+
+  <div class="rounded-2xl border-2 p-8 shadow-sm text-left" style="border-color:#FF4500">
+    <div class="inline-block mb-4 px-3 py-1 rounded-full text-xs font-bold text-white" style="background:#FF4500">
+      Founder Plan
+    </div>
+    <div class="mb-2">
+      <span class="text-4xl font-extrabold text-gray-900">$29</span>
+      <span class="text-lg text-gray-500">/month</span>
+    </div>
+    <p class="text-sm text-gray-500 mb-6">or $290/year <span class="font-semibold text-green-600">(save 2 months)</span></p>
+    <ul class="space-y-2 text-sm text-gray-700 mb-8">
+      <% [
+        "Unlimited keyword watchers",
+        "All subreddits supported",
+        "Checks every 30 minutes",
+        "Daily digest emails",
+        "Reply template manager",
+        "Lead scoring and tracking",
+        "7-day free trial"
+      ].each do |feature| %>
+        <li class="flex items-center gap-2">
+          <span class="font-bold text-green-500">✓</span>
+          <%= feature %>
+        </li>
+      <% end %>
+    </ul>
+    <p class="text-sm text-gray-500">Upgrade flow coming soon — contact support if your trial ended.</p>
+  </div>
+</div>

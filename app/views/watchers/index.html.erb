@@ -1,0 +1,65 @@
+<% content_for :title, "My Watchers" %>
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">My Watchers</h1>
+    <p class="text-gray-500 text-sm mt-0.5">Keyword + subreddit pairs checked every 30 minutes.</p>
+  </div>
+  <%= link_to new_watcher_path,
+        class: "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white",
+        style: "background:#FF4500" do %>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    New Watcher
+  <% end %>
+</div>
+
+<% if @watchers.any? %>
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <ul class="divide-y divide-gray-100">
+      <% @watchers.each do |m| %>
+        <li class="hover:bg-gray-50">
+          <div class="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <%= link_to watcher_leads_path(m), class: "font-medium text-gray-900 hover:underline" do %>
+                <%= m.name %>
+              <% end %>
+              <p class="text-xs text-gray-400 mt-0.5 truncate">
+                <%= m.subreddits_list.map { |s| "r/#{s}" }.join(" · ") %>
+              </p>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <% if Rails.env.development? %>
+                <%= button_to "Run check", run_check_watcher_path(m), method: :post,
+                      class: "px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 text-amber-800 bg-amber-50 hover:bg-amber-100",
+                      title: "Enqueue WatcherCheckJob (dev)" %>
+              <% end %>
+              <% new_count = m.leads.where(status: "new").merge(Lead.not_ai_rejected).count %>
+              <% if new_count > 0 %>
+                <span class="text-xs font-bold text-white rounded-full px-2 py-0.5" style="background:#FF4500">
+                  <%= new_count %> new
+                </span>
+              <% end %>
+              <span class="inline-block w-2 h-2 rounded-full <%= m.active? ? "bg-green-400" : "bg-gray-300" %>" title="<%= m.active? ? "Active" : "Paused" %>"></span>
+              <%= link_to "Edit", edit_watcher_path(m),
+                    class: "px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50" %>
+              <%= button_to watcher_path(m), method: :delete,
+                    data: { turbo_confirm: "Delete watcher \"#{m.name}\"?" },
+                    class: "px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-100 text-red-500 hover:bg-red-50" do %>
+                Delete
+              <% end %>
+            </div>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% else %>
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm py-20 text-center">
+    <p class="text-gray-500 text-sm mb-4">No watchers yet.</p>
+    <%= link_to "Create your first watcher", new_watcher_path,
+          class: "inline-block px-6 py-3 rounded-xl font-semibold text-sm text-white",
+          style: "background:#FF4500" %>
+  </div>
+<% end %>

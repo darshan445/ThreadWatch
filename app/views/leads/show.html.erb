@@ -1,0 +1,160 @@
+<% content_for :title, @raw_post.title.truncate(50) %>
+
+<%= link_to "← #{@lead.watcher.name}", watcher_leads_path(@lead.watcher), class: "text-sm text-gray-400 hover:text-gray-600 mb-5 inline-block" %>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <div class="lg:col-span-2 space-y-5">
+
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="flex-1">
+          <h1 class="text-lg font-bold text-gray-900 leading-snug"><%= @raw_post.title %></h1>
+          <div class="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-400">
+            <span>r/<%= @raw_post.metadata&.dig("subreddit") %></span>
+            <span>u/<%= @raw_post.metadata&.dig("author") %></span>
+            <span>↑ <%= @raw_post.upvotes %></span>
+            <span>💬 <%= @raw_post.comment_count %></span>
+            <% if @raw_post.scraped_at %>
+              <span>Scraped <%= time_ago_in_words(@raw_post.scraped_at) %> ago</span>
+            <% end %>
+          </div>
+        </div>
+        <%= render "leads/score_badge", score: @lead.score %>
+      </div>
+
+      <% if @raw_post.body.present? %>
+        <div class="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+          <%= @raw_post.body %>
+        </div>
+      <% end %>
+
+      <div class="mt-4 pt-4 border-t border-gray-100">
+        <%= link_to "View on Reddit →", @raw_post.url, target: "_blank", rel: "noopener",
+              class: "inline-flex items-center gap-1.5 text-sm font-semibold hover:underline",
+              style: "color:#FF4500" %>
+      </div>
+    </div>
+
+    <% if @comments.any? %>
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-gray-100">
+          <h2 class="font-semibold text-gray-900 text-sm">Top Comments</h2>
+        </div>
+        <ul class="divide-y divide-gray-100">
+          <% @comments.each do |c| %>
+            <li class="px-5 py-3 <%= "pl-10" if c.depth == 1 %>">
+              <p class="text-sm text-gray-700 leading-relaxed"><%= c.body.truncate(300) %></p>
+              <p class="text-xs text-gray-400 mt-1">↑ <%= c.score %> · depth <%= c.depth %></p>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <% if @reply_templates.any? %>
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-gray-100">
+          <h2 class="font-semibold text-gray-900 text-sm">Reply Templates</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Click to copy to clipboard</p>
+        </div>
+        <ul class="divide-y divide-gray-100">
+          <% @reply_templates.each do |t| %>
+            <li class="px-5 py-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="text-sm font-medium text-gray-900"><%= t.name %></p>
+                  <p class="text-xs text-gray-500 mt-0.5 line-clamp-2"><%= t.body %></p>
+                </div>
+                <button type="button"
+                        onclick="navigator.clipboard.writeText(<%= t.body.to_json %>)"
+                        class="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50">
+                  Copy
+                </button>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+  </div>
+
+  <div class="space-y-4">
+
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+      <h2 class="font-semibold text-gray-900 text-sm mb-3">Status</h2>
+      <div class="mb-3">
+        <%= render "leads/status_badge", status: @lead.status %>
+      </div>
+      <%= form_with model: @lead, method: :patch, class: "space-y-2" do |f| %>
+        <% Lead::STATUSES.each do |s| %>
+          <% active = @lead.status == s %>
+          <button type="submit" name="lead[status]" value="<%= s %>"
+                  class="w-full py-2 px-3 rounded-xl text-sm font-medium border-2 text-left capitalize
+                         <%= active ? "border-orange-400 text-orange-700 bg-orange-50" : "border-gray-200 text-gray-600 hover:bg-gray-50" %>">
+            <%= s %>
+            <% if active %><span class="float-right">✓</span><% end %>
+          </button>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if @lead.ai_match != false || @lead.ai_reason.present? %>
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        <h2 class="font-semibold text-gray-900 text-sm mb-2">AI screening</h2>
+        <% if @lead.ai_match.nil? %>
+          <p class="text-sm text-indigo-700">Review in progress…</p>
+        <% elsif @lead.ai_match %>
+          <p class="text-sm text-green-800">Likely fit for your watcher.</p>
+        <% else %>
+          <p class="text-sm text-gray-600">Not a strong fit (hidden from the main feed).</p>
+        <% end %>
+        <% if @lead.ai_reason.present? %>
+          <p class="text-xs text-gray-500 mt-2 leading-relaxed"><%= @lead.ai_reason %></p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+      <h2 class="font-semibold text-gray-900 text-sm mb-3">Notes</h2>
+      <%= form_with model: @lead, method: :patch do |f| %>
+        <%= f.text_area :notes, rows: 4,
+              placeholder: "Add notes about this lead…",
+              class: "w-full px-3 py-2.5 rounded-xl border border-gray-300 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500" %>
+        <%= f.submit "Save Notes",
+              class: "mt-2 w-full py-2 rounded-xl text-sm font-semibold text-white cursor-pointer",
+              style: "background:#FF4500" %>
+      <% end %>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+      <h2 class="font-semibold text-gray-900 text-sm mb-3">Details</h2>
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <dt class="text-gray-400">Watcher</dt>
+          <dd class="font-medium text-gray-700 text-right"><%= @lead.watcher.name %></dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-400">Score</dt>
+          <dd><%= render "leads/score_badge", score: @lead.score %></dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-400">Upvotes</dt>
+          <dd class="font-medium text-gray-700"><%= @raw_post.upvotes %></dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-400">Comments</dt>
+          <dd class="font-medium text-gray-700"><%= @raw_post.comment_count %></dd>
+        </div>
+        <% if @lead.replied_at %>
+          <div class="flex justify-between">
+            <dt class="text-gray-400">Replied</dt>
+            <dd class="font-medium text-gray-700"><%= @lead.replied_at.strftime("%b %d") %></dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+
+  </div>
+</div>

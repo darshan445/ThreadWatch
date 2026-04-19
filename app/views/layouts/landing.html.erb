@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= content_for?(:title) ? "#{yield(:title)} · RedditLeads" : "RedditLeads — Find Customers on Reddit" %></title>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            reddit: { DEFAULT: '#FF4500', dark: '#E03D00' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+<body class="bg-white text-gray-900 antialiased">
+  <%= yield %>
+</body>
+</html>

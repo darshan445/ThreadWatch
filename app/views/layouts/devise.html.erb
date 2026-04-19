@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= content_for?(:title) ? "#{yield(:title)} · RedditLeads" : "RedditLeads" %></title>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { reddit: { DEFAULT: '#FF4500', dark: '#E03D00' } } } }
+    }
+  </script>
+</head>
+<body class="min-h-screen bg-gray-50 antialiased flex flex-col">
+
+  <%# ── Navbar ── %>
+  <header class="w-full bg-white border-b border-gray-100">
+    <div class="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+      <%= link_to root_path, class: "text-xl font-extrabold", style: "color:#FF4500" do %>
+        RedditLeads
+      <% end %>
+      <p class="text-sm text-gray-400">Find customers on Reddit</p>
+    </div>
+  </header>
+
+  <%# ── Flash messages ── %>
+  <div class="max-w-md mx-auto w-full px-6 mt-4">
+    <% flash.each do |type, msg| %>
+      <% bg = type.to_s == "alert" ? "bg-red-50 border-red-200 text-red-700" : "bg-green-50 border-green-200 text-green-700" %>
+      <div class="rounded-xl border px-4 py-3 text-sm font-medium mb-2 <%= bg %>">
+        <%= msg %>
+      </div>
+    <% end %>
+  </div>
+
+  <%# ── Content card ── %>
+  <main class="flex-1 flex items-start justify-center pt-6 pb-16 px-6">
+    <div class="w-full max-w-md">
+      <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+        <%= yield %>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center py-6 text-xs text-gray-400">
+    © <%= Date.current.year %> RedditLeads · Built for solo founders
+  </footer>
+
+</body>
+</html>
