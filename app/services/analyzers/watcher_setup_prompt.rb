@@ -5,11 +5,15 @@ module Analyzers
   # System prompt is intentionally generic; all business context goes in the user message.
   class WatcherSetupPrompt
     SYSTEM_PROMPT = <<~TXT.squish
-      You are a Reddit growth tool that generates monitoring configuration for a SaaS/product business.
+      You are an expert Reddit lead-generation strategist for product businesses.
+      Your job: given a product description, produce the exact search configuration
+      needed to surface Reddit posts where real potential customers vent about the
+      specific problem this product solves.
+      Be precise. Generic or broad terms waste API calls and produce noise.
       Return JSON only. No markdown, no explanation.
     TXT
 
-    MAX_KEYWORDS         = 5
+    MAX_KEYWORDS          = 5
     MAX_SUBREDDIT_QUERIES = 8
 
     class << self
@@ -28,16 +32,29 @@ module Analyzers
           Business name: #{watcher.name}
           Description: #{desc}
 
-          Generate Reddit monitoring configuration:
+          Generate Reddit monitoring configuration to find posts where potential customers
+          are actively describing the SPECIFIC PAIN this product solves.
 
-          1. Exactly #{MAX_KEYWORDS} keyword phrases (2–4 natural words each).
-             Focus on pain-point statements and buying signals people actually type on Reddit.
-             Avoid generic single words. Good examples: "chasing payment", "clients not paying", "late invoice".
+          ── KEYWORDS (exactly #{MAX_KEYWORDS} phrases) ──────────────────────────────────
+          Rules:
+          • Each phrase is something a frustrated potential customer would literally type
+            in a Reddit post title or body — conversational, raw, complaint-style language.
+          • The phrase must reflect the SPECIFIC pain this product addresses, not the
+            product category. Bad: "invoice tool". Good: "clients won't pay invoice".
+          • 2–5 words per phrase. No jargon, no product names, no generic nouns alone.
+          • Ask yourself: "Would someone who desperately needs this product type this phrase
+            in a Reddit rant or question?" If yes — include it.
 
-          2. #{MAX_SUBREDDIT_QUERIES} subreddit search terms (1–2 words each) to discover the most relevant communities.
-             Think broadly: audience communities, topic communities, competitor/industry communities.
+          ── SUBREDDIT SEARCH TERMS (exactly #{MAX_SUBREDDIT_QUERIES} terms) ─────────────
+          Rules:
+          • These are short search queries (1–3 words) used to DISCOVER subreddits —
+            not the subreddit names themselves.
+          • Target communities where the TARGET BUYER of this product actually posts:
+            their profession, their industry, their workflow, their tools.
+          • Mix: direct audience communities + adjacent problem communities.
+          • Ask yourself: "Where on Reddit would the person who has this pain spend time?"
 
-          Output exactly this JSON structure (arrays of strings):
+          Output exactly this JSON (arrays of strings, nothing else):
           {
             "keywords": ["phrase 1", "phrase 2", ...],
             "subreddit_queries": ["query 1", "query 2", ...]

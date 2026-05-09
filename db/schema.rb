@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_04_19_130001) do
+ActiveRecord::Schema[7.1].define(version: 2026_05_09_100001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -26,26 +26,11 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_19_130001) do
     t.boolean "ai_match"
     t.text "ai_reason"
     t.datetime "ai_reviewed_at"
+    t.integer "ai_confidence"
     t.index ["raw_post_id"], name: "index_leads_on_raw_post_id"
     t.index ["status"], name: "index_leads_on_status"
     t.index ["watcher_id", "raw_post_id"], name: "index_leads_on_watcher_and_post", unique: true
     t.index ["watcher_id"], name: "index_leads_on_watcher_id"
-  end
-
-  create_table "pipeline_runs", force: :cascade do |t|
-    t.string "status", default: "pending", null: false
-    t.text "subreddits"
-    t.integer "limit_per_phrase", default: 100
-    t.integer "top_clusters", default: 10
-    t.boolean "force_reprocess", default: false
-    t.text "log_output"
-    t.datetime "started_at"
-    t.datetime "finished_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.string "time_filter", default: "year", null: false
-    t.index ["created_at"], name: "index_pipeline_runs_on_created_at"
-    t.index ["status"], name: "index_pipeline_runs_on_status"
   end
 
   create_table "post_comments", force: :cascade do |t|
@@ -72,8 +57,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_19_130001) do
     t.datetime "updated_at", null: false
     t.integer "upvotes"
     t.integer "comment_count"
-    t.boolean "processed", default: false, null: false
-    t.index ["processed"], name: "index_raw_posts_on_processed"
     t.index ["source", "external_id"], name: "index_raw_posts_on_source_and_external_id", unique: true
   end
 
@@ -107,6 +90,16 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_19_130001) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
+  create_table "watcher_posts", force: :cascade do |t|
+    t.bigint "watcher_id", null: false
+    t.bigint "raw_post_id", null: false
+    t.boolean "processed", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["raw_post_id"], name: "index_watcher_posts_on_raw_post_id"
+    t.index ["watcher_id", "raw_post_id"], name: "index_watcher_posts_on_watcher_id_and_raw_post_id", unique: true
+  end
+
   create_table "watchers", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "name", null: false
@@ -127,5 +120,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_19_130001) do
   add_foreign_key "leads", "watchers"
   add_foreign_key "post_comments", "raw_posts"
   add_foreign_key "reply_templates", "users"
+  add_foreign_key "watcher_posts", "raw_posts"
+  add_foreign_key "watcher_posts", "watchers"
   add_foreign_key "watchers", "users"
 end

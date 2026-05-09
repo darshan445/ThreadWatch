@@ -1,57 +1,44 @@
 # frozen_string_literal: true
 
-# Lead #score (max 100): 1) AI fit  2) keyword fit  3) Reddit engagement
+# Lead #score (max 100):
+#
+#   AI relevance  — 75 pts  → (ai_confidence / 10.0) * 75
+#                             ai_confidence is 1–10 from Gemini (PostRelevanceChecker)
+#                             nil/0 confidence → 0 AI pts
+#
+#   Engagement    — 25 pts  → upvotes (10) + comment count (10) + recency (5)
+#
 module LeadScoring
-  AI_MAX         = 50
-  KEYWORD_MAX    = 35
-  ENGAGEMENT_MAX = 15
+  AI_MAX         = 75
+  CONFIDENCE_MAX = 10
+  ENGAGEMENT_MAX = 25
 
   module_function
 
-  # New lead — AI not reviewed yet (ai_match nil): keyword + engagement only.
-  def base_score(raw_post, watcher)
-    total_score(raw_post, watcher, ai_match: nil)
+  # ai_confidence: Integer 1–10 (or nil when Gemini was skipped / fallback)
+  def total_score(raw_post, ai_confidence:)
+    ai_points(ai_confidence) + engagement_points(raw_post)
   end
 
-  # ai_match: true / false / nil (treated like false for AI points until reviewed).
-  def total_score(raw_post, watcher, ai_match:)
-    post = Struct.new(:title, :body).new(raw_post.title.to_s, raw_post.body.to_s)
-    rel  = Matchers::KeywordMatcher.relevance_score(post, watcher.keywords)
-    kw   = (rel * KEYWORD_MAX / 100.0).round
-    eng  = engagement_points(raw_post)
-    ai   = ai_points(ai_match)
-
-    (ai + kw + eng).clamp(0, 100)
+  def ai_points(confidence)
+    return 0 unless confidence.to_i > 0
+    ((confidence.to_i.clamp(1, CONFIDENCE_MAX) / CONFIDENCE_MAX.to_f) * AI_MAX).round
   end
 
-  def ai_points(ai_match)
-    ai_match == true ? AI_MAX : 0
-  end
-
-  def keyword_points(raw_post, watcher)
-    post = Struct.new(:title, :body).new(raw_post.title.to_s, raw_post.body.to_s)
-    rel  = Matchers::KeywordMatcher.relevance_score(post, watcher.keywords)
-    (rel * KEYWORD_MAX / 100.0).round
-  end
-
-  # Tertiary: Reddit activity + freshness (capped; one recency tier).
+  # Up to 25 pts split across upvotes, comments, and post freshness.
   def engagement_points(raw_post)
     e = 0
-    e += [raw_post.upvotes.to_i, 6].min
-    e += [raw_post.comment_count.to_i * 2, 6].min
+    e += [raw_post.upvotes.to_i, 10].min
+    e += [raw_post.comment_count.to_i * 2, 10].min
 
     created_utc = raw_post.metadata&.dig("created_utc").to_i
     if created_utc.positive?
       hours = (Time.current.to_i - created_utc) / 3600
-      e += if hours < 2
-             3
-           elsif hours < 6
-             2
-           elsif hours < 24
-             1
-           else
-             0
-           end
+      e += if    hours < 2  then 5
+             elsif hours < 6  then 3
+             elsif hours < 24 then 1
+             else                  0
+             end
     end
 
     [e, ENGAGEMENT_MAX].min

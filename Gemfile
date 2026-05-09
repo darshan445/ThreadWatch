@@ -17,7 +17,6 @@ gem "sidekiq", "~> 7.0"
 gem "sidekiq-cron"
 gem "redis"
 gem "httparty"
-gem "anthropic"
 
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"

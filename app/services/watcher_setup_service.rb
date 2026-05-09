@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Populates watcher.keywords and watcher.subreddits from description using:
-#   Layer 1 — Anthropic (generates keyword phrases + subreddit search terms)
+#   Layer 1 — Gemini (generates keyword phrases + subreddit search terms)
 #   Layer 2 — Reddit subreddits/search.json (validates / discovers real subreddit names)
 # Always sets both attributes; falls back gracefully when AI or Reddit is unavailable.
 class WatcherSetupService
@@ -28,8 +28,8 @@ class WatcherSetupService
   end
 
   def call
-    if anthropic_api_key.blank?
-      Rails.logger.warn "[WatcherSetupService] no Anthropic key — using fallback"
+    unless GeminiClient.api_key?
+      Rails.logger.warn "[WatcherSetupService] no Gemini key — using fallback"
       apply_fallback!
       return result
     end
@@ -62,31 +62,18 @@ class WatcherSetupService
 
   # ── AI ───────────────────────────────────────────────────────────────────
 
-  def anthropic_api_key
-    @anthropic_api_key ||=
-      Rails.application.credentials[:anthropic_api_key].presence ||
-      Rails.application.credentials.dig(:anthropic, :api_key).presence ||
-      ENV["ANTHROPIC_API_KEY"].presence
-  end
-
   def call_ai
-    client     = Anthropic::Client.new(access_token: anthropic_api_key)
-    user_msg   = Analyzers::WatcherSetupPrompt.build_user_message(@watcher)
-    model      = ENV.fetch("ANTHROPIC_SETUP_MODEL", "claude-haiku-4-5-20251001")
+    user_msg = Analyzers::WatcherSetupPrompt.build_user_message(@watcher)
 
-    Rails.logger.info "[WatcherSetupService] calling AI model=#{model}"
+    Rails.logger.info "[WatcherSetupService] calling Gemini"
 
-    response = client.messages(parameters: {
-      model:    model,
-      max_tokens: 600,
-      system:   Analyzers::WatcherSetupPrompt::SYSTEM_PROMPT,
-      messages: [{ role: "user", content: user_msg }]
-    })
+    raw = GeminiClient.generate(
+      system:     Analyzers::WatcherSetupPrompt::SYSTEM_PROMPT,
+      user:       user_msg,
+      max_tokens: 600
+    )
 
-    response = response.deep_stringify_keys if response.respond_to?(:deep_stringify_keys)
-    raw      = response.dig("content", 0, "text").to_s.strip
-
-    Rails.logger.info "[WatcherSetupService] AI raw=#{raw.truncate(600).inspect}"
+    Rails.logger.info "[WatcherSetupService] Gemini raw=#{raw.truncate(600).inspect}"
 
     Analyzers::WatcherSetupPrompt.parse_response(raw)
   end

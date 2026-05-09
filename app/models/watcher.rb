@@ -1,6 +1,8 @@
 class Watcher < ApplicationRecord
   belongs_to :user
-  has_many   :leads, foreign_key: :watcher_id, dependent: :destroy
+  has_many   :leads,         foreign_key: :watcher_id, dependent: :destroy
+  has_many   :watcher_posts, dependent: :destroy
+  has_many   :raw_posts,     through: :watcher_posts
 
   REDDIT_TIME_WINDOWS = %w[hour day week month year all].freeze
 
