@@ -4,14 +4,19 @@ module Scrapers
   # Orchestrates the full scraping pipeline for one watcher run.
   #
   # Pipeline per subreddit × phrase:
-  #   1. Search Reddit   — returns raw post data (title/body only)
-  #   2. Keyword filter  — cheap pre-screen, no API calls
-  #   3. Find-or-create  — RawPost stored for every keyword-passing post
-  #   4. Processed gate  — skip posts this watcher already evaluated (WatcherPost.processed)
-  #   5. AI filter       — Gemini decides relevance + confidence 1-10
-  #   6. Mark processed  — WatcherPost.processed=true for ALL posts that reached AI
-  #   7. Fetch comments  — only for AI-relevant posts
-  #   8. Create lead     — stores Lead with score
+  #   1. Search Reddit        — fetch post data (title + body only)
+  #   2. Keyword pre-filter   — cheap word-overlap check, no API calls
+  #   3. Find-or-create post  — RawPost stored once globally (deduplicated by external_id)
+  #   4. Lead existence check — if a Lead already exists for this watcher+post, skip it
+  #   5. AI relevance filter  — Gemini scores relevance (confidence 1-10)
+  #   6. Fetch comments       — only for AI-accepted posts
+  #   7. Create lead          — unique on (watcher_id, raw_post_id); DB constraint is safety net
+  #
+  # Schema relationships:
+  #   RawPost (global, one per Reddit post)
+  #     └─ has_many :leads
+  #     └─ has_many :watchers, through: :leads
+  #   Lead (scoped per watcher — unique on watcher_id + raw_post_id)
   #
   class RedditScraper
     MAX_LIMIT    = 100
@@ -64,7 +69,7 @@ module Scrapers
 
     private
 
-    # ── Pipeline steps ────────────────────────────────────────────────────────
+    # ── Pipeline ──────────────────────────────────────────────────────────────
 
     def scrape(subreddit, phrase)
       if @api.subreddit_burned?(subreddit)
@@ -77,44 +82,37 @@ module Scrapers
                                              time_filter: @time_filter,
                                              limit: @limit)
 
-      # ── Step 1: keyword pre-filter ─────────────────────────────────────────
+      # 1. Keyword pre-filter
       kw_passed, kw_skipped = posts.partition { |p| Matchers::KeywordMatcher.matches?(p, @watcher) }
       kw_skipped.each { |p| log "kw_skip id=#{p["id"]} title=#{p["title"].to_s.truncate(80).inspect}" }
-
       log "search r/#{subreddit} q=#{q.inspect} returned=#{posts.size} " \
           "kw_passed=#{kw_passed.size} kw_skipped=#{kw_skipped.size}"
-
       return if kw_passed.empty?
 
-      # ── Step 2: find-or-create RawPosts for every keyword-passing post ─────
-      raw_posts_by_ext_id = build_raw_posts_map(kw_passed, subreddit)
+      # 2. Find-or-create RawPost for every keyword-passing post
+      raw_posts_map = build_raw_posts_map(kw_passed, subreddit)
 
-      # ── Step 3: skip posts this watcher already processed ─────────────────
-      to_check, already_done = kw_passed.partition do |p|
-        rp = raw_posts_by_ext_id[p["id"]]
-        rp && !watcher_post_processed?(rp)
+      # 3. Skip posts that already have a lead for this watcher
+      needs_ai, already_led = kw_passed.partition do |p|
+        rp = raw_posts_map[p["id"]]
+        rp && !lead_exists_for_watcher?(rp)
       end
 
-      already_done.each do |p|
-        log "watcher_skip id=#{p["id"]} already_processed_for_this_watcher"
+      already_led.each do |p|
+        log "lead_exists_skip id=#{p["id"]} — lead already created for this watcher"
         @skipped += 1
       end
 
-      log "watcher_filter r/#{subreddit} to_check=#{to_check.size} already_done=#{already_done.size}"
+      log "lead_check r/#{subreddit} needs_ai=#{needs_ai.size} already_led=#{already_led.size}"
+      return if needs_ai.empty?
 
-      return if to_check.empty?
+      # 4. AI relevance filter (Gemini)
+      relevant = PostRelevanceChecker.filter(needs_ai, @watcher)
+      log "ai_filter r/#{subreddit} sent=#{needs_ai.size} ai_relevant=#{relevant.size}"
 
-      # ── Step 4: AI relevance filter ────────────────────────────────────────
-      relevant = PostRelevanceChecker.filter(to_check, @watcher)
-
-      log "ai_filter r/#{subreddit} sent=#{to_check.size} ai_relevant=#{relevant.size}"
-
-      # ── Step 5: mark ALL checked posts as processed (avoids re-running AI) ─
-      to_check.each { |p| mark_watcher_post_processed!(raw_posts_by_ext_id[p["id"]]) }
-
-      # ── Step 6: fetch comments + create leads for AI-relevant posts ─────────
+      # 5. Fetch comments + create lead for each relevant post
       relevant.each do |r|
-        raw_post = raw_posts_by_ext_id[r[:post_data]["id"]]
+        raw_post = raw_posts_map[r[:post_data]["id"]]
         next unless raw_post
 
         nodes = @api.fetch_comment_nodes(r[:post_data]["permalink"].to_s)
@@ -127,10 +125,8 @@ module Scrapers
       log "scrape_error #{err.inspect}", level: :error
     end
 
-    # ── RawPost find-or-create ─────────────────────────────────────────────────
+    # ── RawPost: find-or-create (one global record per Reddit post) ────────────
 
-    # Returns a Hash of { reddit_external_id => RawPost } for all keyword-passing posts.
-    # Creates new RawPost records for unseen posts; reuses existing ones for duplicates.
     def build_raw_posts_map(posts_data, subreddit)
       posts_data.each_with_object({}) do |data, map|
         rp = find_or_create_raw_post(data, subreddit)
@@ -140,10 +136,10 @@ module Scrapers
 
     def find_or_create_raw_post(data, subreddit)
       reddit_id = data["id"]
+      existing  = RawPost.find_by(source: "reddit", external_id: reddit_id)
 
-      existing = RawPost.find_by(source: "reddit", external_id: reddit_id)
       if existing
-        log "post_found id=#{existing.id} reddit_id=#{reddit_id}"
+        log "post_exists id=#{existing.id} reddit_id=#{reddit_id}"
         return existing
       end
 
@@ -167,33 +163,20 @@ module Scrapers
         }
       )
       @saved += 1
-      log "post_stored id=#{post.id} reddit_id=#{reddit_id} title=#{post.title.to_s.truncate(80).inspect}"
+      log "post_created id=#{post.id} reddit_id=#{reddit_id} title=#{post.title.to_s.truncate(80).inspect}"
       post
     rescue ActiveRecord::RecordNotUnique
-      # Race condition: another job stored it first — fetch and return it
       RawPost.find_by(source: "reddit", external_id: reddit_id)
     end
 
-    # ── WatcherPost tracking ───────────────────────────────────────────────────
+    # ── Lead existence check ───────────────────────────────────────────────────
 
-    def watcher_post_processed?(raw_post)
-      WatcherPost.exists?(watcher_id: @watcher.id, raw_post_id: raw_post.id, processed: true)
+    # True when a Lead already exists for this watcher+post — no need to call AI again.
+    def lead_exists_for_watcher?(raw_post)
+      Lead.exists?(watcher_id: @watcher.id, raw_post_id: raw_post.id)
     end
 
-    def mark_watcher_post_processed!(raw_post)
-      return unless raw_post
-
-      WatcherPost.upsert(
-        { watcher_id: @watcher.id, raw_post_id: raw_post.id, processed: true,
-          created_at: Time.current, updated_at: Time.current },
-        unique_by: %i[watcher_id raw_post_id],
-        update_only: %i[processed updated_at]
-      )
-    rescue => e
-      log "watcher_post_error raw_post_id=#{raw_post.id} #{e.message}", level: :warn
-    end
-
-    # ── Storage ───────────────────────────────────────────────────────────────
+    # ── Comments ──────────────────────────────────────────────────────────────
 
     def store_comments(raw_post, nodes)
       nodes.each { |node| store_comment_tree(raw_post, node, depth: 0) }
@@ -223,8 +206,10 @@ module Scrapers
       children = replies.is_a?(Hash) ? replies.dig("data", "children") : []
       Array(children).each { |child| store_comment_tree(raw_post, child, depth: depth + 1) }
     rescue ActiveRecord::RecordNotUnique
-      # duplicate comment from a previous run — skip silently
+      # duplicate comment — skip silently
     end
+
+    # ── Lead ──────────────────────────────────────────────────────────────────
 
     def create_lead(raw_post, ai_reason:, ai_confidence:)
       lead = Lead.create!(
@@ -242,7 +227,7 @@ module Scrapers
       lead
     rescue ActiveRecord::RecordNotUnique
       @skipped += 1
-      log "skip duplicate_lead raw_post_id=#{raw_post.id}", level: :warn
+      log "lead_duplicate_skip raw_post_id=#{raw_post.id}", level: :warn
       nil
     end
 

@@ -31,7 +31,7 @@ module Scrapers
 
     # Returns [{ post_data: Hash, ai_reason: String|nil, ai_confidence: Integer }, ...]
     def filter(posts_data)
-      return accept_all(posts_data) unless GeminiClient.api_key?
+      # return accept_all(posts_data) unless GeminiClient.api_key?
       return [] if posts_data.empty?
 
       posts_data.each_slice(BATCH_SIZE).flat_map { |batch| check_batch(batch) }
@@ -56,7 +56,7 @@ module Scrapers
       results
     rescue => e
       Rails.logger.warn "[PostRelevanceChecker] Gemini error — accepting batch: #{e.message}"
-      accept_all(batch)
+      # accept_all(batch)
     end
 
     def build_prompt(posts_data)
@@ -137,7 +137,7 @@ module Scrapers
       end
     rescue => e
       Rails.logger.warn "[PostRelevanceChecker] parse error — accepting batch: #{e.message}"
-      accept_all(posts_data)
+      # accept_all(posts_data)
     end
 
     def accept_all(posts_data)

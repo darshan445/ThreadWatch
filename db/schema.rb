@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_05_09_100001) do
+ActiveRecord::Schema[7.1].define(version: 2026_05_09_100002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -90,16 +90,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_09_100001) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
-  create_table "watcher_posts", force: :cascade do |t|
-    t.bigint "watcher_id", null: false
-    t.bigint "raw_post_id", null: false
-    t.boolean "processed", default: false, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["raw_post_id"], name: "index_watcher_posts_on_raw_post_id"
-    t.index ["watcher_id", "raw_post_id"], name: "index_watcher_posts_on_watcher_id_and_raw_post_id", unique: true
-  end
-
   create_table "watchers", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "name", null: false
@@ -120,7 +110,5 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_09_100001) do
   add_foreign_key "leads", "watchers"
   add_foreign_key "post_comments", "raw_posts"
   add_foreign_key "reply_templates", "users"
-  add_foreign_key "watcher_posts", "raw_posts"
-  add_foreign_key "watcher_posts", "watchers"
   add_foreign_key "watchers", "users"
 end
