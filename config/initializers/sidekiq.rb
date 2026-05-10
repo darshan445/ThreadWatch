@@ -12,7 +12,7 @@ Sidekiq.configure_server do |config|
   config.on(:startup) do
     Sidekiq::Cron::Job.create(
       name:  "Schedule all watchers every 30 minutes",
-      cron:  "*/30 * * * *",
+      cron:  "0 * * * *",
       class: "ScheduleWatchersJob"
     )
 
