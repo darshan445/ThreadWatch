@@ -154,11 +154,11 @@ module Scrapers
         url:           data["url"]&.start_with?("http") ? data["url"] : "#{RedditApiClient::BASE_URL}#{data["permalink"]}",
         upvotes:       data["score"],
         comment_count: data["num_comments"],
+        posted_at:     data["created_utc"].present? ? Time.at(data["created_utc"].to_i).utc : nil,
         scraped_at:    Time.current,
         metadata: {
           subreddit:    subreddit,
           author:       data["author"],
-          created_utc:  data["created_utc"],
           upvote_ratio: data["upvote_ratio"]
         }
       )

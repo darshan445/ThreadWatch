@@ -31,9 +31,8 @@ module LeadScoring
     e += [raw_post.upvotes.to_i, 10].min
     e += [raw_post.comment_count.to_i * 2, 10].min
 
-    created_utc = raw_post.metadata&.dig("created_utc").to_i
-    if created_utc.positive?
-      hours = (Time.current.to_i - created_utc) / 3600
+    if raw_post.posted_at.present?
+      hours = (Time.current - raw_post.posted_at) / 3600
       e += if    hours < 2  then 5
              elsif hours < 6  then 3
              elsif hours < 24 then 1

@@ -7,7 +7,7 @@ module Watchers
       @leads           = @watcher.leads.includes(:raw_post)
       @leads           = @leads.where(status: @status_filter) if @status_filter.present?
       @leads           = @leads.not_ai_rejected unless @status_filter == "ignored"
-      @leads           = @leads.order(score: :desc, created_at: :desc)
+      @leads           = @leads.joins(:raw_post).order("raw_posts.posted_at DESC NULLS LAST, leads.score DESC")
       @reply_templates = current_user.reply_templates.order(use_count: :desc)
     end
 

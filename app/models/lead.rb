@@ -9,7 +9,8 @@ class Lead < ApplicationRecord
   scope :by_status,  ->(s) { where(status: s) }
   scope :fresh,      -> { where(status: "new") }
   scope :actionable, -> { where(status: %w[new saved]) }
-  scope :by_score,   -> { order(score: :desc) }
+  scope :by_score,      -> { order(score: :desc) }
+  scope :by_posted_at,  -> { joins(:raw_post).order("raw_posts.posted_at DESC NULLS LAST") }
   # Excludes AI-rejected leads (ai_match == false). Pending review (NULL) and matched (true) stay visible.
   scope :not_ai_rejected, -> { where.not(ai_match: false) }
   scope :ai_digestable, -> { where(ai_match: true) }

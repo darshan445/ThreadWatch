@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_05_09_100002) do
+ActiveRecord::Schema[7.1].define(version: 2026_05_10_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -57,6 +57,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_09_100002) do
     t.datetime "updated_at", null: false
     t.integer "upvotes"
     t.integer "comment_count"
+    t.datetime "posted_at"
+    t.index ["posted_at"], name: "index_raw_posts_on_posted_at"
     t.index ["source", "external_id"], name: "index_raw_posts_on_source_and_external_id", unique: true
   end
 
